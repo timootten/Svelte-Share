@@ -43,6 +43,7 @@
 	},
 	"dependencies": {
 		"peerjs": "^1.5.5",
+		"qr-code-styling": "^1.9.2",
 		"svelte-sonner": "^1.0.5"
 	}
 }

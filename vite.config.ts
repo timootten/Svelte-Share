@@ -5,9 +5,12 @@ import { defineConfig } from 'vite';
 export default defineConfig({
 	plugins: [tailwindcss(), sveltekit()],
 	server: {
-		allowedHosts: ['l5173.shadehost.eu']
+		allowedHosts: ['l5173.shadehost.eu', 'l4173.shadehost.eu']
 	},
 	ssr: {
 		noExternal: ['svelte-sonner']
+	},
+	preview: {
+		allowedHosts: ['l5173.shadehost.eu', 'l4173.shadehost.eu']
 	}
 });

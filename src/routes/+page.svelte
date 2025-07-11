@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
 	import { browser } from '$app/environment';
 	import { betterPeer } from '$lib/global.svelte';
 	import { REGEXP_ONLY_DIGITS } from 'bits-ui';
@@ -25,7 +26,39 @@
 			connectToPeer();
 		}
 	});
+
+	let qrContainer;
+
+	onMount(async () => {
+		const { default: QRCodeStyling } = await import('qr-code-styling');
+
+		const qrCode = new QRCodeStyling({
+			width: 300,
+			height: 300,
+			type: 'svg',
+			data: 'https://l4173.shadehost.eu/#' + id(),
+			dotsOptions: {
+				color: '#4267b2',
+				type: 'dots' // Runde Dots
+			},
+			cornersSquareOptions: {
+				color: '#4267b2',
+				type: 'extra-rounded' // Abgerundete Ecken
+			},
+			cornersDotOptions: {
+				color: '#4267b2',
+				type: 'dots' // Runde Eck-Dots
+			},
+			backgroundOptions: {
+				color: '#ffffff'
+			}
+		});
+
+		qrCode.append(qrContainer);
+	});
 </script>
+
+<div bind:this={qrContainer}></div>
 
 {#if status() === 'LOADING'}
 	<div class="status-container">
