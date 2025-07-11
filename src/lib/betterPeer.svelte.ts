@@ -12,41 +12,67 @@ function generateRandomString(length = 6): string {
 export function BetterPeer(prefix: string = 'DEFEDFJEIDKD') {
 	let id = $state<string>('');
 	let peerId = $state<string>('');
+	let remoteId = $state<string>('');
+	let remotePeerId = $state<string>('');
 
 	let peer = $state<Peer>();
 	let connection = $state<DataConnection>();
 
-	let status = $state<'PENDING' | 'CONNECTED'>('PENDING');
+	// Updated status type with all four states
+	let status = $state<'LOADING' | 'READY' | 'PENDING' | 'CONNECTED'>('LOADING');
 
 	// Error callback
 	let errorCallback: ((message: string) => void) | null = null;
 	let dataCallback: ((data: unknown) => void) | null = null;
 
+	function resetConnection() {
+		if (connection) {
+			connection.close();
+		}
+		connection = undefined;
+		// Reset to READY instead of PENDING since peer is still available
+		status = 'READY';
+		remoteId = '';
+		remotePeerId = '';
+	}
+
 	// Initialize peer
 	function initialize() {
+		// Set to LOADING when starting initialization
+		status = 'LOADING';
 		id = generateRandomString();
 		peerId = `${prefix}_${id}`;
 		peer = new Peer(peerId);
 
 		peer.on('open', () => {
 			console.log('Peer ready:', peerId);
+			// Set to READY when peer is initialized and ready for connections
+			status = 'READY';
 		});
 
 		peer.on('error', (error) => {
 			if (errorCallback) {
-				errorCallback(error.message);
+				if (error.type === 'peer-unavailable') {
+					status = 'READY';
+					errorCallback("This peer doesn't exist or is not reachable");
+				} else {
+					errorCallback(error.message);
+				}
 			} else {
 				console.error('Peer error:', error);
 			}
 		});
 
 		peer.on('connection', handleIncomingConnection);
+
+		return destroy;
 	}
 
 	function setupConnectionListeners(conn: DataConnection) {
 		conn.on('open', () => {
 			status = 'CONNECTED';
-			console.log('Connection established');
+			remotePeerId = conn.peer;
+			remoteId = conn.peer.split('_')[1]; // Extract remote ID from peer ID
 
 			// Set up data listener immediately when connection opens
 			if (dataCallback) {
@@ -57,9 +83,8 @@ export function BetterPeer(prefix: string = 'DEFEDFJEIDKD') {
 		});
 
 		conn.on('close', () => {
-			connection = undefined;
-			status = 'PENDING';
-			console.log('Connection closed');
+			errorCallback?.('Connection closed by remote peer');
+			resetConnection();
 		});
 
 		conn.on('error', (error) => {
@@ -68,8 +93,7 @@ export function BetterPeer(prefix: string = 'DEFEDFJEIDKD') {
 			} else {
 				console.error('Connection error:', error);
 			}
-			connection = undefined;
-			status = 'PENDING';
+			resetConnection();
 		});
 	}
 
@@ -82,6 +106,8 @@ export function BetterPeer(prefix: string = 'DEFEDFJEIDKD') {
 
 		connection = conn;
 		console.log('Incoming connection received');
+		// Set to PENDING when receiving incoming connection
+		status = 'PENDING';
 		setupConnectionListeners(conn);
 	}
 
@@ -90,11 +116,15 @@ export function BetterPeer(prefix: string = 'DEFEDFJEIDKD') {
 			throw new Error('Already connected to a peer');
 		}
 
+		// Set to PENDING when attempting to connect
+		status = 'PENDING';
 		const targetPeerId = `${prefix}_${targetId}`;
 		console.log('Connecting to peer:', targetPeerId);
 
 		const conn = peer?.connect(targetPeerId);
 		if (!conn) {
+			// Reset to READY if connection fails
+			status = 'READY';
 			if (errorCallback) {
 				errorCallback("This peer doesn't exist or is not reachable");
 			} else {
@@ -134,9 +164,7 @@ export function BetterPeer(prefix: string = 'DEFEDFJEIDKD') {
 
 	function disconnect() {
 		if (connection) {
-			connection.close();
-			connection = undefined;
-			status = 'PENDING';
+			resetConnection();
 		}
 	}
 
@@ -157,6 +185,12 @@ export function BetterPeer(prefix: string = 'DEFEDFJEIDKD') {
 		},
 		peerId() {
 			return peerId;
+		},
+		remoteId() {
+			return remoteId;
+		},
+		remotePeerId() {
+			return remotePeerId;
 		},
 		status() {
 			return status;

@@ -6,5 +6,8 @@ export default defineConfig({
 	plugins: [tailwindcss(), sveltekit()],
 	server: {
 		allowedHosts: ['l5173.shadehost.eu']
+	},
+	ssr: {
+		noExternal: ['svelte-sonner']
 	}
 });
