@@ -3,15 +3,16 @@
 	import { toast, Toaster } from 'svelte-sonner';
 	import { page } from '$app/state';
 	import { betterPeer } from '$lib/global.svelte';
-	import { goto } from '$app/navigation';
+	import { beforeNavigate, goto } from '$app/navigation';
 	import { onMount } from 'svelte';
 
 	let { children } = $props();
 
-	const { status, initialize, onError } = betterPeer;
+	const { status, initialize, onError, onSuccess } = betterPeer;
 
 	onMount(initialize);
 	onError(toast.error);
+	onSuccess(() => toast.success('Connected successfully!'));
 
 	$effect(() => {
 		const pathname = page.url.pathname;
@@ -23,6 +24,12 @@
 			if (pathname !== '/') {
 				goto('/');
 			}
+		}
+	});
+
+	beforeNavigate((event) => {
+		if (status() !== 'CONNECTED' && event.to?.url.pathname === '/connected') {
+			event.cancel();
 		}
 	});
 </script>

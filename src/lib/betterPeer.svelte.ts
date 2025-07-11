@@ -23,6 +23,7 @@ export function BetterPeer(prefix: string = 'DEFEDFJEIDKD') {
 
 	// Error callback
 	let errorCallback: ((message: string) => void) | null = null;
+	let successCallback: (() => void) | null = null;
 	let dataCallback: ((data: unknown) => void) | null = null;
 
 	function resetConnection() {
@@ -80,6 +81,8 @@ export function BetterPeer(prefix: string = 'DEFEDFJEIDKD') {
 					dataCallback?.(data);
 				});
 			}
+
+			successCallback?.();
 		});
 
 		conn.on('close', () => {
@@ -179,6 +182,10 @@ export function BetterPeer(prefix: string = 'DEFEDFJEIDKD') {
 		errorCallback = callback;
 	}
 
+	function onSuccess(callback: () => void) {
+		successCallback = callback;
+	}
+
 	return {
 		id() {
 			return id;
@@ -201,6 +208,7 @@ export function BetterPeer(prefix: string = 'DEFEDFJEIDKD') {
 		onData,
 		disconnect,
 		destroy,
-		onError
+		onError,
+		onSuccess
 	};
 }
