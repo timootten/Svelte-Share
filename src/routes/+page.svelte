@@ -1,29 +1,30 @@
 <script lang="ts">
 	import { browser } from '$app/environment';
-	import * as InputOTP from '$lib/components/ui/input-otp/index.js';
 	import { betterPeer } from '$lib/global.svelte';
+	import { REGEXP_ONLY_DIGITS } from 'bits-ui';
+	import * as InputOTP from '$lib/components/ui/input-otp/index.js';
 
 	const { id, status, connect } = betterPeer;
 
-	let inputPeerId = $state<string>('');
-
 	const connectToPeer = async () => {
-		console.log('Connecting to remote peer:', inputPeerId);
-		await connect(inputPeerId);
+		console.log('Connecting to remote peer:', inputRemoteId);
+		await connect(inputRemoteId);
 	};
 
 	const getRemoteId = () => {
 		if (!browser) return '';
-		console.log('XXX');
-		const match = window?.location?.hash.match(/#(\d{6})/);
-		if (match) {
-			return match[1];
-		} else {
-			return '';
-		}
+		const match = window?.location?.hash.match(/#(\d{6})\b/);
+		return match ? match[1] : '';
 	};
 
-	let remoteId = $state<string>(getRemoteId());
+	let inputRemoteId = $state<string>(getRemoteId());
+
+	$effect(() => {
+		const input = inputRemoteId.trim();
+		if (status() === 'READY' && input.length === 6) {
+			connectToPeer();
+		}
+	});
 </script>
 
 {#if status() === 'LOADING'}
@@ -36,17 +37,7 @@
 		<p>✅ Ready to connect</p>
 		<p>Your Peer ID: <strong>{id()}</strong></p>
 		<div class="connect-section">
-			<input
-				type="text"
-				bind:value={inputPeerId}
-				placeholder="Enter remote peer ID"
-				disabled={false}
-			/>
-			<script lang="ts">
-				import * as InputOTP from '$lib/components/ui/input-otp/index.js';
-			</script>
-
-			<InputOTP.Root maxlength={6} bind:value={remoteId}>
+			<InputOTP.Root pattern={REGEXP_ONLY_DIGITS} maxlength={6} bind:value={inputRemoteId}>
 				{#snippet children({ cells })}
 					<InputOTP.Group>
 						{#each cells.slice(0, 3) as cell}
@@ -61,7 +52,7 @@
 					</InputOTP.Group>
 				{/snippet}
 			</InputOTP.Root>
-			<button onclick={connectToPeer} disabled={!inputPeerId.trim()}> Connect </button>
+			<button onclick={connectToPeer} disabled={!inputRemoteId.trim()}> Connect </button>
 		</div>
 	</div>
 {:else if status() === 'PENDING'}
