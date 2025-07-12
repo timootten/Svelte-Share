@@ -21,7 +21,11 @@
 
 	let inputRemoteId = $state<string>(getRemoteId());
 	let derviedRemoteId = $derived<string>(inputRemoteId);
-	let digitStatus = $state<'DEFAULT' | 'PENDING' | 'ERROR'>('DEFAULT');
+	let digitStatus = $state<'DEFAULT' | 'PENDING' | 'ERROR' | 'SUCCESS'>('DEFAULT');
+
+	onSuccess(() => {
+		digitStatus = 'SUCCESS';
+	});
 
 	onError((_, type) => {
 		if (type === 'wrong-id') {
