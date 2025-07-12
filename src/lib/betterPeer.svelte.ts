@@ -1,13 +1,5 @@
 import { type DataConnection, default as Peer } from 'peerjs';
-
-function generateRandomString(length = 6): string {
-	const chars = '0123456789';
-	let result = '';
-	for (let i = 0; i < length; i++) {
-		result += chars.charAt(Math.floor(Math.random() * chars.length));
-	}
-	return result;
-}
+import { generateRandomString } from './utils';
 
 export function BetterPeer(prefix: string = 'DEFEDFJEIDKD') {
 	let id = $state<string>('');
@@ -27,11 +19,11 @@ export function BetterPeer(prefix: string = 'DEFEDFJEIDKD') {
 	let dataCallback: ((data: unknown) => void) | null = null;
 
 	function resetConnection() {
+		console.log('Resetting connection');
 		if (connection) {
 			connection.close();
 		}
 		connection = undefined;
-		// Reset to READY instead of PENDING since peer is still available
 		status = 'READY';
 		remoteId = '';
 		remotePeerId = '';
@@ -52,9 +44,9 @@ export function BetterPeer(prefix: string = 'DEFEDFJEIDKD') {
 		});
 
 		peer.on('error', (error) => {
+			console.log('Peer error:', error);
 			if (errorCallback) {
 				if (error.type === 'peer-unavailable') {
-					status = 'READY';
 					errorCallback("This peer doesn't exist or is not reachable");
 				} else {
 					errorCallback(error.message);
@@ -62,6 +54,7 @@ export function BetterPeer(prefix: string = 'DEFEDFJEIDKD') {
 			} else {
 				console.error('Peer error:', error);
 			}
+			resetConnection();
 		});
 
 		peer.on('connection', handleIncomingConnection);
@@ -115,26 +108,42 @@ export function BetterPeer(prefix: string = 'DEFEDFJEIDKD') {
 	}
 
 	async function connect(targetId: string) {
+		console.log('Connecting to peer with ID:', targetId);
 		if (connection) {
 			throw new Error('Already connected to a peer');
 		}
 
-		// Set to PENDING when attempting to connect
 		status = 'PENDING';
 		const targetPeerId = `${prefix}_${targetId}`;
 		console.log('Connecting to peer:', targetPeerId);
 
 		const conn = peer?.connect(targetPeerId);
+
 		if (!conn) {
-			// Reset to READY if connection fails
-			status = 'READY';
-			if (errorCallback) {
-				errorCallback("This peer doesn't exist or is not reachable");
-			} else {
-				console.error("This peer doesn't exist or is not reachable");
-			}
+			errorCallback?.('Unable to create connection object');
+			resetConnection();
 			return;
 		}
+
+		// Immediately attach error listener
+		conn.on('error', (err) => {
+			console.error('Connection error:', err);
+			errorCallback?.('Failed to connect to peer');
+			resetConnection();
+		});
+
+		// Optional: add a timeout in case neither 'open' nor 'error' is triggered
+		const timeout = setTimeout(() => {
+			if (status === 'PENDING') {
+				errorCallback?.('Connection attempt timed out');
+				conn.close();
+				resetConnection();
+			}
+		}, 5000); // 5 seconds timeout
+
+		conn.on('open', () => {
+			clearTimeout(timeout); // Clear timeout on success
+		});
 
 		connection = conn;
 		setupConnectionListeners(conn);

@@ -7,10 +7,10 @@ export default defineConfig({
 	server: {
 		allowedHosts: ['l5173.shadehost.eu', 'l4173.shadehost.eu']
 	},
-	ssr: {
-		noExternal: ['svelte-sonner']
-	},
 	preview: {
 		allowedHosts: ['l5173.shadehost.eu', 'l4173.shadehost.eu']
+	},
+	ssr: {
+		noExternal: ['svelte-sonner']
 	}
 });
