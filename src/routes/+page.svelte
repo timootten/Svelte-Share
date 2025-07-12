@@ -7,13 +7,14 @@
 	import { betterPeer } from '$lib/global.svelte';
 	import { getRemoteId } from '$lib/browserHash';
 	import { cn } from '$lib/utils';
+	import { PUBLIC_URL } from '$env/static/public';
 
 	const { id, status, connect, onError, onSuccess } = betterPeer;
 
 	let qrCodeElement: HTMLDivElement;
 
 	onMount(async () => {
-		const url = `https://l5173.shadehost.eu/#${id()}`;
+		const url = `${PUBLIC_URL}/#${id()}`;
 		const qrCode = await getQRCode(url);
 		qrCode.append(qrCodeElement);
 	});
