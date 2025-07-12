@@ -33,7 +33,8 @@
 			a.click();
 			document.body.removeChild(a);
 			URL.revokeObjectURL(url);
-		} else {
+		} else if (data.type === 'text') {
+			remoteText = data.text;
 			console.log('Received data:', data);
 		}
 	});
@@ -47,6 +48,8 @@
 			sendFile(file);
 		}
 	});
+
+	let remoteText = $state<string>('');
 
 	const sendFile = async (file: File) => {
 		isUploading = true;
@@ -93,4 +96,11 @@
 			<p>📤 Uploading file...</p>
 		{/if}
 	</div>
+
+	<textarea
+		bind:value={remoteText}
+		oninput={() => send({ type: 'text', text: remoteText })}
+		cols="50"
+		rows="20">Text Here remote</textarea
+	>
 </div>

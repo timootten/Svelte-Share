@@ -12,18 +12,6 @@ export type WithoutChildren<T> = T extends { children?: any } ? Omit<T, 'childre
 export type WithoutChildrenOrChild<T> = WithoutChildren<WithoutChild<T>>;
 export type WithElementRef<T, U extends HTMLElement = HTMLElement> = T & { ref?: U | null };
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function debounce<T extends (...args: any[]) => void>(func: T, delay: number) {
-	let timer: ReturnType<typeof setTimeout>;
-
-	return (...args: Parameters<T>): void => {
-		clearTimeout(timer);
-		timer = setTimeout(() => {
-			func(...args);
-		}, delay);
-	};
-}
-
 export function generateRandomString(length = 6): string {
 	const chars = '0123456789';
 	let result = '';

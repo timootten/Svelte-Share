@@ -10,13 +10,22 @@ export function BetterPeer(prefix: string = 'DEFEDFJEIDKD') {
 	let peer = $state<Peer>();
 	let connection = $state<DataConnection>();
 
-	// Updated status type with all four states
 	let status = $state<'LOADING' | 'READY' | 'PENDING' | 'CONNECTED'>('LOADING');
 
-	// Error callback
-	let errorCallback: ((message: string) => void) | null = null;
+	// Store multiple error callbacks
+	let errorCallbacks: ((message: string, type?: 'wrong-id') => void)[] = [];
 	let successCallback: (() => void) | null = null;
 	let dataCallback: ((data: unknown) => void) | null = null;
+
+	// Function to invoke all registered error callbacks
+	function triggerError(message: string, type?: 'wrong-id') {
+		if (errorCallbacks.length > 0) {
+			errorCallbacks.forEach((callback) => callback(message, type));
+		} else {
+			// Fallback to console.error if no callbacks are registered
+			console.error('Peer Error:', message);
+		}
+	}
 
 	function resetConnection() {
 		console.log('Resetting connection');
@@ -29,9 +38,7 @@ export function BetterPeer(prefix: string = 'DEFEDFJEIDKD') {
 		remotePeerId = '';
 	}
 
-	// Initialize peer
 	function initialize() {
-		// Set to LOADING when starting initialization
 		status = 'LOADING';
 		id = generateRandomString();
 		peerId = `${prefix}_${id}`;
@@ -39,20 +46,15 @@ export function BetterPeer(prefix: string = 'DEFEDFJEIDKD') {
 
 		peer.on('open', () => {
 			console.log('Peer ready:', peerId);
-			// Set to READY when peer is initialized and ready for connections
 			status = 'READY';
 		});
 
 		peer.on('error', (error) => {
 			console.log('Peer error:', error);
-			if (errorCallback) {
-				if (error.type === 'peer-unavailable') {
-					errorCallback("This peer doesn't exist or is not reachable");
-				} else {
-					errorCallback(error.message);
-				}
+			if (error.type === 'peer-unavailable') {
+				triggerError("This peer doesn't exist or is not reachable", 'wrong-id');
 			} else {
-				console.error('Peer error:', error);
+				triggerError(error.message);
 			}
 			resetConnection();
 		});
@@ -66,35 +68,28 @@ export function BetterPeer(prefix: string = 'DEFEDFJEIDKD') {
 		conn.on('open', () => {
 			status = 'CONNECTED';
 			remotePeerId = conn.peer;
-			remoteId = conn.peer.split('_')[1]; // Extract remote ID from peer ID
+			remoteId = conn.peer.split('_')[1];
 
-			// Set up data listener immediately when connection opens
 			if (dataCallback) {
 				conn.on('data', (data: unknown) => {
 					dataCallback?.(data);
 				});
 			}
-
 			successCallback?.();
 		});
 
 		conn.on('close', () => {
-			errorCallback?.('Connection closed by remote peer');
+			triggerError('Connection closed');
 			resetConnection();
 		});
 
 		conn.on('error', (error) => {
-			if (errorCallback) {
-				errorCallback(error.message);
-			} else {
-				console.error('Connection error:', error);
-			}
+			triggerError(error.message);
 			resetConnection();
 		});
 	}
 
 	function handleIncomingConnection(conn: DataConnection) {
-		// Reject if already connected (1-to-1 only)
 		if (connection) {
 			conn.close();
 			return;
@@ -102,7 +97,6 @@ export function BetterPeer(prefix: string = 'DEFEDFJEIDKD') {
 
 		connection = conn;
 		console.log('Incoming connection received');
-		// Set to PENDING when receiving incoming connection
 		status = 'PENDING';
 		setupConnectionListeners(conn);
 	}
@@ -120,29 +114,27 @@ export function BetterPeer(prefix: string = 'DEFEDFJEIDKD') {
 		const conn = peer?.connect(targetPeerId);
 
 		if (!conn) {
-			errorCallback?.('Unable to create connection object');
+			triggerError('Unable to create connection object');
 			resetConnection();
 			return;
 		}
 
-		// Immediately attach error listener
 		conn.on('error', (err) => {
 			console.error('Connection error:', err);
-			errorCallback?.('Failed to connect to peer');
+			triggerError('Failed to connect to peer');
 			resetConnection();
 		});
 
-		// Optional: add a timeout in case neither 'open' nor 'error' is triggered
 		const timeout = setTimeout(() => {
 			if (status === 'PENDING') {
-				errorCallback?.('Connection attempt timed out');
+				triggerError('Connection attempt timed out');
 				conn.close();
 				resetConnection();
 			}
-		}, 5000); // 5 seconds timeout
+		}, 5000);
 
 		conn.on('open', () => {
-			clearTimeout(timeout); // Clear timeout on success
+			clearTimeout(timeout);
 		});
 
 		connection = conn;
@@ -155,18 +147,12 @@ export function BetterPeer(prefix: string = 'DEFEDFJEIDKD') {
 			connection.send(data);
 		} else {
 			const errorMsg = !connection ? 'No connection established' : 'Connection not ready';
-			if (errorCallback) {
-				errorCallback(errorMsg);
-			} else {
-				console.error(errorMsg);
-			}
+			triggerError(errorMsg);
 		}
 	}
 
 	function onData<T>(callback: (data: T) => void) {
 		dataCallback = (data: unknown) => callback(data as T);
-
-		// If connection already exists and is open, set up listener immediately
 		if (connection && status === 'CONNECTED') {
 			connection.on('data', (data: unknown) => {
 				callback(data as T);
@@ -187,8 +173,13 @@ export function BetterPeer(prefix: string = 'DEFEDFJEIDKD') {
 		}
 	}
 
-	function onError(callback: (message: string) => void) {
-		errorCallback = callback;
+	// Updated onError to support multiple listeners
+	function onError(callback: (message: string, type?: 'wrong-id') => void): () => void {
+		errorCallbacks.push(callback);
+		// Return an unsubscribe function
+		return () => {
+			errorCallbacks = errorCallbacks.filter((cb) => cb !== callback);
+		};
 	}
 
 	function onSuccess(callback: () => void) {
@@ -196,21 +187,11 @@ export function BetterPeer(prefix: string = 'DEFEDFJEIDKD') {
 	}
 
 	return {
-		id() {
-			return id;
-		},
-		peerId() {
-			return peerId;
-		},
-		remoteId() {
-			return remoteId;
-		},
-		remotePeerId() {
-			return remotePeerId;
-		},
-		status() {
-			return status;
-		},
+		id: () => id,
+		peerId: () => peerId,
+		remoteId: () => remoteId,
+		remotePeerId: () => remotePeerId,
+		status: () => status,
 		initialize,
 		connect,
 		send,

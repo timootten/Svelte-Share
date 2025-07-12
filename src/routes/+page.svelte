@@ -2,12 +2,13 @@
 	import { onMount } from 'svelte';
 	import * as Card from '$lib/components/ui/card/index.js';
 	import DigitInput from '$lib/components/core/digit-input.svelte';
+	import { Skeleton } from '$lib/components/ui/skeleton/index.js';
 	import { getQRCode } from '$lib/qrcode';
 	import { betterPeer } from '$lib/global.svelte';
 	import { getRemoteId } from '$lib/browserHash';
-	import { debounce } from '$lib/utils';
+	import { cn } from '$lib/utils';
 
-	const { id, status, connect } = betterPeer;
+	const { id, status, connect, onError, onSuccess } = betterPeer;
 
 	let qrCodeElement: HTMLDivElement;
 
@@ -19,6 +20,23 @@
 
 	let inputRemoteId = $state<string>(getRemoteId());
 	let derviedRemoteId = $derived<string>(inputRemoteId);
+	let digitStatus = $state<'DEFAULT' | 'PENDING' | 'ERROR'>('DEFAULT');
+
+	onError((_, type) => {
+		if (type === 'wrong-id') {
+			digitStatus = 'ERROR';
+		} else {
+			digitStatus = 'DEFAULT';
+		}
+	});
+
+	$effect(() => {
+		if (inputRemoteId.length < 6) {
+			digitStatus = 'DEFAULT';
+		} else {
+			digitStatus = 'PENDING';
+		}
+	});
 
 	$effect(() => {
 		if (status() === 'READY' && derviedRemoteId.length === 6) {
@@ -27,8 +45,6 @@
 			derviedRemoteId = '';
 		}
 	});
-
-	let digitStatus = $state<'DEFAULT' | 'PENDING' | 'ERROR'>('DEFAULT');
 </script>
 
 <!-- Responsive Grid Container with improved centering -->
@@ -46,7 +62,12 @@
 			<Card.Content class="flex h-full flex-col items-center justify-center p-8">
 				<div class="flex w-full flex-col items-center space-y-2">
 					<div class="flex flex-col items-center space-y-2">
-						<DigitInput bind:status={digitStatus} bind:value={inputRemoteId} />
+						<DigitInput
+							autofocus
+							bind:status={digitStatus}
+							bind:value={inputRemoteId}
+							maxlength={6}
+						/>
 					</div>
 				</div>
 			</Card.Content>
@@ -60,8 +81,16 @@
 			</Card.Header>
 			<hr />
 			<Card.Content class="flex h-full  flex-col items-center justify-center p-8">
-				<div class="space-y-4 text-center">
-					<div bind:this={qrCodeElement} class="flex justify-center"></div>
+				<div class=" space-y-4 text-center">
+					{#if status() === 'LOADING'}
+						<Skeleton class="h-[300px] w-[300px] rounded-3xl" />
+					{/if}
+					<div
+						bind:this={qrCodeElement}
+						class={cn('flex justify-center', {
+							hidden: status() === 'LOADING'
+						})}
+					></div>
 				</div>
 			</Card.Content>
 		</Card.Root>

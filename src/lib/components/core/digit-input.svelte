@@ -1,17 +1,17 @@
 <script lang="ts">
 	import * as InputOTP from '$lib/components/ui/input-otp/index.js';
+	import { PinInput as InputOTPPrimitive } from 'bits-ui';
 	import { cn } from '$lib/utils';
 	import { REGEXP_ONLY_DIGITS } from 'bits-ui';
 
 	let {
-		maxlength = $bindable(6),
 		value = $bindable(''),
-		status = $bindable('DEFAULT')
+		status = $bindable('DEFAULT'),
+		...restProps
 	}: {
 		maxlength?: number;
-		value?: string;
 		status?: 'DEFAULT' | 'ERROR' | 'SUCCESS' | 'PENDING';
-	} = $props();
+	} & InputOTPPrimitive.RootProps = $props();
 
 	const className = $derived(
 		cn({
@@ -22,7 +22,7 @@
 	);
 </script>
 
-<InputOTP.Root pattern={REGEXP_ONLY_DIGITS} {maxlength} bind:value>
+<InputOTP.Root autofocus pattern={REGEXP_ONLY_DIGITS} bind:value {...restProps}>
 	{#snippet children({ cells })}
 		<InputOTP.Group>
 			{#each cells.slice(0, 3) as cell}

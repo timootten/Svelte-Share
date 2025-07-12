@@ -7,15 +7,17 @@
 	import { onMount } from 'svelte';
 	import { ModeWatcher } from 'mode-watcher';
 	import ThemeSwitcher from '$lib/components/core/theme-switcher.svelte';
+	import { Skeleton } from '$lib/components/ui/skeleton/index.js';
 	import { Button } from '$lib/components/ui/button';
 	import { ArrowBigLeft, Home } from 'lucide-svelte';
+	import { cn } from '$lib/utils';
 
 	let { children } = $props();
 
 	const { status, id, initialize, disconnect, onError, onSuccess } = betterPeer;
 
 	onMount(initialize);
-	onError(toast.error);
+	onError((errorMessage) => toast.error(errorMessage));
 	onSuccess(() => toast.success('Connected successfully!'));
 
 	$effect(() => {
@@ -38,11 +40,11 @@
 	});
 </script>
 
-<Toaster position="top-right" richColors />
+<Toaster position="bottom-right" richColors />
 <ModeWatcher />
-<div class="h-screen w-full">
+<div class="flex h-screen w-full flex-col">
 	<div
-		class="fixed top-0 right-0 left-0 z-50 border-b border-gray-200 bg-white/80 backdrop-blur-sm dark:border-gray-700 dark:bg-gray-900/80"
+		class="fixed top-0 right-0 left-0 z-50 h-16 border-b border-gray-200 bg-white/80 backdrop-blur-sm dark:border-gray-700 dark:bg-gray-900/80"
 	>
 		<div class="container mx-auto px-4 py-3">
 			<div class="flex items-center justify-between">
@@ -66,11 +68,21 @@
 				</Button>
 				<!-- Peer ID - Center -->
 				<div class="flex items-center space-x-2">
-					<div class="h-2 w-2 rounded-full bg-green-500"></div>
+					<div
+						class={cn('h-2 w-2 rounded-full ', {
+							'bg-blue-500': status() === 'CONNECTED',
+							'bg-green-500': status() === 'READY',
+							'bg-yellow-500': status() === 'LOADING' || status() === 'PENDING'
+						})}
+					></div>
 					<span class="text-sm text-gray-600 dark:text-gray-400">Your Peer ID:</span>
-					<span class="font-mono text-sm font-semibold text-gray-800 dark:text-gray-200"
-						>{id()}</span
-					>
+					<span class="font-mono text-xl font-semibold text-gray-800 dark:text-gray-200">
+						{#if status() === 'LOADING'}
+							<Skeleton class="h-[30px] w-[120px] rounded-full" />
+						{:else}
+							{id().slice(0, 3) + ' • ' + id().slice(3)}
+						{/if}
+					</span>
 				</div>
 
 				<!-- Theme Switcher - Right -->
@@ -79,9 +91,11 @@
 		</div>
 	</div>
 
-	<div class="min-h-[calc(100vh - 80px)] container mx-auto mt-16 h-full px-4 pt-0 lg:mt-0 lg:pt-16">
-		<div class="flex h-full flex-col">
-			{@render children()}
+	<main class="flex-1 pt-20 pb-4">
+		<div class="container mx-auto h-full px-4">
+			<div class="flex h-full flex-col">
+				{@render children()}
+			</div>
 		</div>
-	</div>
+	</main>
 </div>
