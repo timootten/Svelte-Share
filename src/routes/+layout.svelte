@@ -40,7 +40,7 @@
 	});
 </script>
 
-<Toaster position="bottom-right" richColors />
+<Toaster position="top-right" richColors />
 <ModeWatcher />
 <div class="flex h-screen w-full flex-col">
 	<div
