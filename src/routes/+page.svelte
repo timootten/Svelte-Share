@@ -13,10 +13,14 @@
 
 	let qrCodeElement: HTMLDivElement;
 
-	onMount(async () => {
-		const url = `${PUBLIC_URL}/#${id()}`;
-		const qrCode = await getQRCode(url);
-		qrCode.append(qrCodeElement);
+	$effect(() => {
+		if (id() == null || id() == '') return;
+		(async () => {
+			console.log('Generating QR Code for ID:', id());
+			const url = `${PUBLIC_URL}/#${id()}`;
+			const qrCode = await getQRCode(url);
+			qrCode.append(qrCodeElement);
+		})();
 	});
 
 	let inputRemoteId = $state<string>(getRemoteId());
