@@ -48,6 +48,7 @@
     "mode-watcher": "^1.1.0",
     "peerjs": "^1.5.5",
     "qr-code-styling": "^1.9.2",
-    "svelte-sonner": "^1.0.5"
+    "svelte-sonner": "^1.0.5",
+    "uuid": "^11.1.0"
   }
 }

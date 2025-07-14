@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
 	import * as Card from '$lib/components/ui/card/index.js';
 	import DigitInput from '$lib/components/core/digit-input.svelte';
 	import { Skeleton } from '$lib/components/ui/skeleton/index.js';
