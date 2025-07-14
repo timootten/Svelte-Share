@@ -81,14 +81,7 @@
 		type: 'upload' | 'download';
 	};
 
-	let fileTransfers: FileTransfer[] = $state([
-		{
-			id: 'xxx',
-			fileName: 'Example.txt',
-			progress: 55.344566545,
-			type: 'upload'
-		}
-	]);
+	let fileTransfers: FileTransfer[] = $state([]);
 
 	let textArea = $state<string>('');
 </script>
